@@ -209,13 +209,18 @@ ok('alarm: 투표 제한 시간(10초) 후 자동으로 정답 공개');
 
 // ───────────── 6. 방 삭제 ─────────────
 h2.send({ t: 'closeRoom' });
-await sleep(500);
+const until = async (fn, what, ms = 8000) => {
+  const t = Date.now();
+  while (Date.now() - t < ms) { if (fn()) return; await sleep(50); }
+  throw new Error(`시간 초과: ${what}`);
+};
+await until(() => a.closed != null, '참가자 연결 종료');
 assert.equal(a.closed, 4001);
 r = await fetch(`${BASE}/api/rooms/${room2.code}`);
 assert.equal(r.status, 404);
 const ghost = new Client(room2.code, 'ghost');
 await ghost.opened;
-await sleep(300);
+await until(() => ghost.errors.length > 0, '없는 방 안내');
 assert.equal(ghost.errors.at(-1)?.code, 'NO_ROOM');
 ok('방 삭제: 연결 종료 안내, 방 조회 404, 재접속 불가');
 
