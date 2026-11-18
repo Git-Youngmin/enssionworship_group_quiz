@@ -1,0 +1,13 @@
+{
+  "name": "jin-quiz",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "진모임 \"누구일까?\" 퀴즈쇼",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "_설명": "질문 프리셋. level: light(가벼움) / middle(중간) / deep(깊음). defaultSet 은 방을 만들 때 기본으로 고르는 질문 id 목록(최대 5개).",
+  "levels": {
+    "light": "가벼움",
+    "middle": "중간",
+    "deep": "깊음"
+  },
+  "questions": [
+    { "id": "app", "level": "light", "text": "요즘 가장 많이 쓰는 앱은?" },
+    { "id": "food", "level": "light", "text": "절대 못 먹는 음식은?" },
+    { "id": "nickname", "level": "light", "text": "어릴 때 별명은?" },
+    { "id": "laugh", "level": "middle", "text": "요즘 나를 웃게 한 일은?" },
+    { "id": "thanks", "level": "middle", "text": "최근 가장 감사했던 일은?" },
+    { "id": "grace", "level": "deep", "text": "올해 받은 은혜 한 가지는?" },
+    { "id": "prayer", "level": "deep", "text": "지금 하고 있는 기도 제목은?" }
+  ],
+  "defaultSet": ["app", "food", "laugh", "grace"]
+}
