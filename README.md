@@ -6,7 +6,7 @@
 
 <p align="center">
   교회 청년부 소그룹(진모임, 한 모임 4~9명)이 <b>폰으로 서로 알아가는</b> 웹앱<br>
-  비공개로 답 쓰기 → 익명으로 맞히기 → 한마디 나눔 → <b>AWARDS</b> 🏆
+  비공개로 답 쓰기 → 익명으로 맞히기 → 한마디 나눔 → <b>ENSSION AWARD</b> 🏆
 </p>
 
 <p align="center">
@@ -23,7 +23,7 @@
 정답이 공개되면 쓴 사람이 한마디를 하고, 자연스럽게 나눔으로 이어집니다.
 
 > 목표는 **텐션이 떨어지지 않게 빠르고 가볍게**입니다. 문제 3~5개, 총 15~20분.
-> 순위표 대신 시상식 느낌의 **AWARDS**로 마무리해서, 승패로 분위기가 가라앉지 않게 했습니다.
+> 순위표 대신 시상식 느낌의 **ENSSION AWARD**로 마무리해서, 승패로 분위기가 가라앉지 않게 했습니다.
 
 | | |
 |---|---|
@@ -48,7 +48,7 @@
 |:---:|:---:|
 | <img src="docs/screenshots/10-host-guessing.png" width="420"> | <img src="docs/screenshots/12-host-reveal.png" width="420"> |
 
-| 답 쓰기 | AWARDS |
+| 답 쓰기 | ENSSION AWARD |
 |:---:|:---:|
 | <img src="docs/screenshots/06-host-writing.png" width="420"> | <img src="docs/screenshots/15-host-final.png" width="420"> |
 
@@ -64,7 +64,7 @@
 |:---:|:---:|:---:|:---:|
 | <img src="docs/screenshots/02-play-join.png" width="190"> | <img src="docs/screenshots/05-play-writing.png" width="190"> | <img src="docs/screenshots/08-play-guessing.png" width="190"> | <img src="docs/screenshots/13-play-reveal.png" width="190"> |
 
-| 제출 완료 | 내 답이 나왔을 때 (투표 불가) | 내 답이 공개됐을 때 | AWARDS |
+| 제출 완료 | 내 답이 나왔을 때 (투표 불가) | 내 답이 공개됐을 때 | ENSSION AWARD |
 |:---:|:---:|:---:|:---:|
 | <img src="docs/screenshots/07-play-submitted.png" width="190"> | <img src="docs/screenshots/09-play-guessing-author.png" width="190"> | <img src="docs/screenshots/14-play-reveal-author.png" width="190"> | <img src="docs/screenshots/16-play-final.png" width="190"> |
 
@@ -79,7 +79,7 @@
 ## 게임 흐름
 
 ```
-lobby ─시작─▶ writing ─(모두 제출 / 시간 종료)─▶ [ guessing ─▶ reveal ] × 문제 수 ─▶ final(AWARDS) ─▶ 방 자동 삭제
+lobby ─시작─▶ writing ─(모두 제출 / 시간 종료)─▶ [ guessing ─▶ reveal ] × 문제 수 ─▶ final(ENSSION AWARD) ─▶ 방 자동 삭제
  대기실        비공개로 답 쓰기                     익명 답 투표      정답 공개·한마디       시상식
 ```
 
@@ -89,9 +89,9 @@ lobby ─시작─▶ writing ─(모두 제출 / 시간 종료)─▶ [ guessin
 | **writing** | 질문 목록, 제출 현황, 타이머 | 질문 모두에 비공개로 답 쓰기 (한 칸당 80자, 비워도 됨) |
 | **guessing** | 익명 답을 큰 글씨로, 투표 인원 | "누구일까?" 투표 (내 답이면 투표 불가, 바꿔 누르면 마지막 투표만 인정) |
 | **reveal** | 🥁 두구두구 → 작성자 공개, 득표 분포, 맞힌 사람, "한마디" 안내 | 정답 · 득표 분포 |
-| **final** | 🏆 AWARDS — 어워드가 하나씩 차례로 등장 | 어워드 + 오늘 나온 이야기 모아 보기 |
+| **final** | 🏆 ENSSION AWARD — 어워드가 하나씩 차례로 등장 | 어워드 + 오늘 나온 이야기 모아 보기 |
 
-**AWARDS 종류**
+**ENSSION AWARD 종류**
 
 | 어워드 | 받는 사람 |
 |---|---|
@@ -288,7 +288,7 @@ npm run deploy
 - [ ] 진행자가 **같은 탭에서 참가**해 조작 버튼으로 시작한다
 - [ ] 같은 닉네임으로 들어가면 안내 문구가 뜬다
 - [ ] 모두 제출하면 자동으로 투표 단계로 넘어간다
-- [ ] 문제마다 투표 → 정답 공개 → 다음 문제가 끝까지 진행되고 **AWARDS**가 뜬다
+- [ ] 문제마다 투표 → 정답 공개 → 다음 문제가 끝까지 진행되고 **ENSSION AWARD**가 뜬다
 - [ ] 단톡방에 링크를 올렸을 때 **미리보기 이미지·제목**이 뜬다
 
 **익명성**

@@ -232,8 +232,8 @@ export function finaleTitle() {
     Array.from({ length: 18 }, (_, i) => h('span', { style: `left:${(i * 37) % 100}%;animation-delay:${(i % 6) * 0.35}s;animation-duration:${3.2 + (i % 5) * 0.5}s` }, bits[i % bits.length])));
   return h('div', { class: 'center finale-title' }, confetti,
     h('div', { class: 'trophy' }, '🏆'),
-    h('h1', { class: 'awards-h' }, 'AWARDS'),
-    h('p', { class: 'muted' }, '오늘의 어워드'));
+    h('h1', { class: 'awards-h' }, 'ENSSION AWARD'),
+    h('p', { class: 'muted' }, '엔션워십 청년부 · 오늘의 어워드'));
 }
 
 export function recapView(final) {
