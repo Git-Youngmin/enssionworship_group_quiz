@@ -152,12 +152,12 @@ npx wrangler login      # 브라우저에서 Cloudflare 로그인 (처음 한 �
 npm run deploy
 ```
 
-배포가 끝나면 `https://jin-quiz.<계정 서브도메인>.workers.dev` 주소가 출력됩니다.
+배포가 끝나면 `https://enssionworship-group-quiz.<계정 서브도메인>.workers.dev` 주소가 출력됩니다.
 
 ### 방법 B — Cloudflare Workers Builds (GitHub 연결, 푸시하면 자동 배포)
 
 1. Cloudflare 대시보드 → **Workers & Pages** → **Create** → **Import a repository** 로 이 GitHub 저장소를 연결
-2. 이름은 `wrangler.toml`의 `name`(`jin-quiz`)과 같게 둡니다
+2. 이름은 `wrangler.toml`의 `name`(`enssionworship-group-quiz`)과 같게 둡니다
 3. 빌드 명령은 비워 두고(빌드 도구 없음), 배포 명령은 기본값 `npx wrangler deploy` 를 사용합니다
 4. 이후 브랜치에 푸시하면 자동으로 배포됩니다
 
