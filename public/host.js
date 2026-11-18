@@ -1,5 +1,5 @@
 // 진행자 화면: 방 만들기 → 큰 화면(QR·질문·익명 답·정답 공개) + 하단 조작 패널
-import { h, mount, toast, store, qrSvg, connectRoom, statusBanner, syncClock, timerEl, playerChips, tallyView, awardsView, recapView, controlsBar, FATAL_TEXT } from './common.js';
+import { h, mount, toast, store, qrSvg, inviteButtons, joinUrl, connectRoom, statusBanner, syncClock, timerEl, playerChips, tallyView, awardsView, finaleTitle, recapView, controlsBar, FATAL_TEXT } from './common.js';
 
 const app = document.getElementById('app');
 const HOST_KEY = 'jinquiz.host';
@@ -120,7 +120,6 @@ function enterRoom({ code, hostToken }) {
 }
 
 const send = (o) => conn?.send(o);
-const joinUrl = (code) => `${location.origin}/play.html?code=${code}`;
 
 function render() {
   const v = view;
@@ -148,6 +147,9 @@ function phoneControlLink() {
 // ───────────── 화면들 ─────────────
 function lobbyScreen(v) {
   return [
+    h('div', { class: 'row', style: 'flex-wrap:wrap' },
+      inviteButtons(v.code),
+      h('a', { class: 'btn', href: `/play.html?code=${v.code}`, style: 'flex:1 1 150px;text-align:center;text-decoration:none;line-height:28px' }, '🙋 나도 참가하기')),
     h('div', { class: 'lobby-grid' },
       h('div', { class: 'center' }, qrSvg(joinUrl(v.code)), h('p', { class: 'muted', style: 'margin-top:8px' }, 'QR을 찍거나 아래 코드를 입력하세요')),
       h('div', { style: 'display:flex;flex-direction:column;gap:12px' },
@@ -155,7 +157,6 @@ function lobbyScreen(v) {
         h('div', { class: 'code' }, v.code),
         h('div', { class: 'card' }, h('p', { class: 'center muted', style: 'margin-bottom:10px' }, v.players.length ? `입장한 사람 ${v.players.length}명` : '아직 아무도 없어요. 기다리는 중…'), playerChips(v)))),
     h('div', { class: 'card soft' }, h('b', null, '오늘의 질문 '), v.questions.map((q, i) => h('div', null, `${i + 1}. ${q.text}`))),
-    h('a', { class: 'btn ghost', href: `/play.html?code=${v.code}`, target: '_blank', rel: 'noopener', style: 'text-align:center;text-decoration:none;line-height:28px' }, '나도 참가하기 (새 탭)'),
     phoneControlLink(),
   ];
 }
@@ -201,7 +202,7 @@ function revealScreen(v) {
 function finalScreen(v) {
   const f = v.final;
   return [
-    h('div', { class: 'center' }, h('div', { style: 'font-size:3em' }, '🎉'), h('h1', null, '오늘의 재미 상')),
+    finaleTitle(),
     awardsView(f),
     h('h2', { class: 'center', style: 'margin-top:8px' }, '오늘 나온 이야기'),
     recapView(f),

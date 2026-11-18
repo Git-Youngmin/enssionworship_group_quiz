@@ -1,5 +1,5 @@
 // 참가자(폰) 화면: 닉네임 → 답 쓰기 → 투표 → 결과
-import { h, mount, toast, store, connectRoom, statusBanner, syncClock, timerEl, playerChips, tallyView, awardsView, recapView, controlsBar, FATAL_TEXT } from './common.js';
+import { h, mount, toast, store, connectRoom, statusBanner, syncClock, timerEl, playerChips, tallyView, awardsView, finaleTitle, recapView, controlsBar, FATAL_TEXT } from './common.js';
 
 const app = document.getElementById('app');
 const params = new URLSearchParams(location.search);
@@ -41,6 +41,7 @@ conn = connectRoom({
   onJoined: (m) => {
     playerToken = m.playerToken;
     store.set(PLAYER_KEY, playerToken);
+    if (m.reclaimed) toast('이어서 참가했어요! 😊');
   },
   onError: (m) => {
     if (m.code === 'BAD_TOKEN') { store.del(PLAYER_KEY); playerToken = null; return; }
@@ -64,7 +65,14 @@ const send = (o) => conn.send(o);
 
 function render() {
   const v = view;
-  const key = `${v.phase}|${v.me ? 'in' : 'out'}|${v.round?.index ?? ''}|${v.writing ? v.writing.submitted && !editing : ''}`;
+  let key = `${v.phase}|${v.me ? 'in' : 'out'}|${v.round?.index ?? ''}|${v.writing ? v.writing.submitted && !editing : ''}`;
+  if (!v.me) key = `out|${v.phase}`;
+  // 닉네임을 쓰는 중에 다른 사람이 들어오거나 나가도 입력칸을 다시 그리지 않는다 (쓰던 글자가 지워지지 않게)
+  if (!v.me && key === renderKey) {
+    const c = document.getElementById('joincount');
+    if (c) c.textContent = `방 ${v.code} · 지금 ${v.players.length}명`;
+    return;
+  }
   // 같은 화면 안에서의 갱신(입장 현황, 제출 수 등)은 입력 중인 칸을 건드리지 않도록 일부만 고친다
   if (key === renderKey && v.phase === 'writing' && (!v.writing.submitted || editing)) {
     const s = document.getElementById('prog');
@@ -77,7 +85,10 @@ function render() {
   if (!v.me) return mount(app, joinScreen(v));
   const screens = { lobby: lobbyScreen, writing: writingScreen, guessing: guessingScreen, reveal: revealScreen, final: finalScreen };
   mount(app, screens[v.phase](v));
-  if (v.isHost) document.body.append(controlsBar(v, send));
+  if (v.isHost) {
+    app.prepend(h('a', { href: '/host.html', class: 'muted', style: 'align-self:flex-end;min-height:44px;display:flex;align-items:center' }, '🖥 진행자 화면 보기'));
+    document.body.append(controlsBar(v, send));
+  }
 }
 
 // ───────────── 화면들 ─────────────
@@ -91,7 +102,7 @@ function joinScreen(v) {
     send({ t: 'join', name });
   };
   return [
-    h('div', { class: 'center', style: 'margin-top:8vh' }, h('div', { style: 'font-size:3em' }, '🕵️'), h('h1', null, '누구일까?'), h('p', { class: 'muted' }, `방 ${v.code} · 지금 ${v.players.length}명`)),
+    h('div', { class: 'center', style: 'margin-top:8vh' }, h('div', { style: 'font-size:3em' }, '🕵️'), h('h1', null, '누구일까?'), h('p', { class: 'muted', id: 'joincount' }, `방 ${v.code} · 지금 ${v.players.length}명`)),
     h('form', { class: 'card', style: 'display:flex;flex-direction:column;gap:12px', onsubmit: go }, h('label', null, '이름 대신 쓸 닉네임을 알려 주세요'), input, h('button', { class: 'btn block', type: 'submit' }, '들어가기')),
     h('p', { class: 'muted center' }, '로그인 없이 닉네임만 써요. 게임이 끝나면 모두 지워져요.'),
   ];
@@ -165,7 +176,7 @@ function revealScreen(v) {
 function finalScreen(v) {
   const f = v.final;
   return [
-    h('div', { class: 'center', style: 'margin-top:3vh' }, h('div', { style: 'font-size:3em' }, '🎉'), h('h1', null, '오늘의 재미 상')),
+    finaleTitle(),
     awardsView(f),
     f.mine && h('p', { class: 'center muted' }, `나는 ${f.mine.guesses}번 중 ${f.mine.correct}번 맞혔어요`),
     h('h2', { class: 'center', style: 'font-size:1.1em;margin-top:8px' }, '오늘 나온 이야기'),

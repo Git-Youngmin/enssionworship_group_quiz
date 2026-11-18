@@ -127,6 +127,41 @@ players[1] = back;
 await host.waitFor((v) => v.players.find((p) => p.name === '지은')?.connected === true, '복귀 표시');
 ok('끊겼다가 토큰으로 같은 사람으로 복귀');
 
+// ───────────── 3-2. 저장 정보를 잃은 사람이 같은 닉네임으로 이어하기 ─────────────
+{
+  const before = players[2];
+  before.send({ t: 'join', name: '하늘' }); // 이미 입장한 연결이 또 입장 시도 → 거절
+  await sleep(150);
+  const other = await connect(code, '하늘(저장정보 없음)', {});
+  other.send({ t: 'join', name: '하늘' });
+  await sleep(200);
+  assert.equal(other.errors.at(-1)?.code, 'NAME_TAKEN', '접속 중이면 거절');
+  before.ws.close();
+  await host.waitFor((v) => v.players.find((p) => p.name === '하늘')?.connected === false, '끊김 표시');
+  other.errors.length = 0;
+  other.send({ t: 'join', name: '하늘' });
+  await other.waitFor((v) => v.me?.name === '하늘', '이어하기');
+  assert.equal(host.view.players.length, 4, '인원이 늘지 않음');
+  const oldToken = before.playerToken;
+  const stale = await connect(code, '옛 토큰', { playerToken: oldToken });
+  assert.ok(stale.errors.some((e) => e.code === 'BAD_TOKEN'), '옛 토큰은 무효');
+  stale.ws.close();
+  other.playerId = before.playerId;
+  players[2] = other;
+  ok('저장 정보를 잃은 사람이 같은 닉네임으로 이어하기 (접속 중이면 거절, 옛 토큰 무효)');
+}
+
+// ───────────── 3-3. 메시지 속도 제한 ─────────────
+{
+  const spam = await connect(code, '연타', {});
+  for (let i = 0; i < 60; i++) spam.send({ t: 'vote', roundIndex: 0, targetId: 'p1' });
+  await sleep(500);
+  assert.ok(spam.errors.some((e) => e.code === 'RATE_LIMIT'), '너무 빠르면 안내');
+  assert.equal(host.view.phase, 'lobby');
+  spam.ws.close();
+  ok('메시지를 너무 빨리 보내면 제한 안내 (다른 사람은 영향 없음)');
+}
+
 // ───────────── 4. 한 판 진행 ─────────────
 host.send({ t: 'start' });
 await Promise.all(players.map((p) => p.waitFor((v) => v.phase === 'writing', 'writing')));
@@ -183,7 +218,7 @@ ok('서버가 보낸 guessing 단계 원본 메시지 전수 검사');
 
 assert.ok(host.view.final.awards.length >= 1);
 assert.ok(!('ranking' in host.view.final));
-ok('재미 상 표시');
+ok('어워드 표시');
 
 // ───────────── 5. 타이머(alarm) ─────────────
 const room2 = await createRoom({

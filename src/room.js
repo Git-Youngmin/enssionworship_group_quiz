@@ -8,6 +8,10 @@ import { DurableObject } from 'cloudflare:workers';
 import { createRoom, reduce, viewFor, nextAlarm, isExpired, playerIdByToken, PHASE } from './game.js';
 
 const MAX_MESSAGE_BYTES = 4096;
+const MAX_SOCKETS = 80; // 한 방에 동시에 붙을 수 있는 연결 수 (참가자 30명 + 여러 탭·화면 여유)
+const RATE_WINDOW_MS = 10_000;
+const RATE_MAX = 40; // 연결 하나가 10초에 보낼 수 있는 메시지 수 (평소엔 많아야 몇 개)
+const RATE_HARD = 200; // 이만큼 넘으면 연결을 끊는다
 
 // WebSocket 종료 코드 (화면에서 안내 문구를 고르는 데 사용)
 export const CLOSE = Object.freeze({ NO_ROOM: 4004, EXPIRED: 4001, KICKED: 4003 });
@@ -20,6 +24,7 @@ export class Room extends DurableObject {
     super(ctx, env);
     this.state = undefined; // undefined = 아직 읽지 않음, null = 방 없음
     this.alarmAt = undefined;
+    this.rate = new WeakMap(); // 연결별 메시지 속도 (메모리에만 둠)
     // 화면이 보내는 'ping' 에는 DO 를 깨우지 않고 'pong' 으로 자동 응답
     ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong'));
   }
@@ -73,7 +78,10 @@ export class Room extends DurableObject {
     if (request.headers.get('Upgrade') !== 'websocket') return new Response('WebSocket 연결이 필요해요.', { status: 426 });
     const { 0: client, 1: server } = new WebSocketPair();
     this.ctx.acceptWebSocket(server);
-    if (!this.load()) {
+    if (this.ctx.getWebSockets().length > MAX_SOCKETS) {
+      this.sendTo(server, { t: 'error', code: 'ROOM_BUSY', message: '지금 이 방에 연결이 너무 많아요. 잠시 후 다시 시도해 주세요.' });
+      server.close(1013, 'busy');
+    } else if (!this.load()) {
       // 브라우저는 업그레이드 실패 사유를 읽을 수 없으므로, 일단 연결한 뒤 이유를 알려 주고 닫는다
       this.sendTo(server, { t: 'error', code: 'NO_ROOM', message: '없는 방이거나 이미 끝난 방이에요.' });
       server.close(CLOSE.NO_ROOM, 'no room');
@@ -87,6 +95,7 @@ export class Room extends DurableObject {
     if (typeof raw !== 'string' || raw.length > MAX_MESSAGE_BYTES) {
       return this.sendError(ws, 'BAD_ACTION', '알 수 없는 요청이에요.');
     }
+    if (!this.allow(ws)) return;
     let msg;
     try {
       msg = JSON.parse(raw);
@@ -113,6 +122,29 @@ export class Room extends DurableObject {
     const action = this.buildAction(msg, att, state);
     if (!action) return this.sendError(ws, 'BAD_ACTION', '알 수 없는 요청이에요.');
     this.apply(ws, action);
+  }
+
+  /** 연결 하나가 너무 빠르게 메시지를 보내면 무시한다 (오작동하는 폰 하나가 방 전체를 느리게 만들지 않게) */
+  allow(ws) {
+    const now = Date.now();
+    let r = this.rate.get(ws);
+    if (!r || now - r.start > RATE_WINDOW_MS) {
+      r = { start: now, n: 0, warned: false };
+      this.rate.set(ws, r);
+    }
+    r.n += 1;
+    if (r.n > RATE_HARD) {
+      try { ws.close(1008, 'too many messages'); } catch {}
+      return false;
+    }
+    if (r.n > RATE_MAX) {
+      if (!r.warned) {
+        r.warned = true;
+        this.sendError(ws, 'RATE_LIMIT', '너무 빨리 누르고 있어요. 잠시 후 다시 해 주세요.');
+      }
+      return false;
+    }
+    return true;
   }
 
   webSocketClose(ws, code) {
@@ -160,7 +192,7 @@ export class Room extends DurableObject {
     this.save(r.state);
     const playerId = r.result.playerId;
     ws.serializeAttachment({ ...att, playerId });
-    this.sendTo(ws, { t: 'joined', playerToken: token, playerId });
+    this.sendTo(ws, { t: 'joined', playerToken: token, playerId, reclaimed: !!r.result.reclaimed });
     this.broadcast();
   }
 

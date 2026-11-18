@@ -341,7 +341,7 @@ describe('투표와 점수', () => {
     assert.equal(v.round.correctVoters.length, 2);
   });
 
-  test('재미 상 계산', () => {
+  test('어워드 계산', () => {
     const { g, ids } = lobbyWith(NAMES, { seed: 11 });
     g.host({ type: 'start' });
     writeAll(g, ids);
@@ -572,5 +572,61 @@ describe('질문 프리셋 JSON', () => {
     const qs = presets.defaultSet.map((id) => presets.questions.find((q) => q.id === id));
     const s = createRoom({ code: 'TEST', hostToken: HOST, questions: qs, now: 0 });
     assert.equal(s.questions.length, 4);
+  });
+});
+
+// ───────────────────────── 닉네임 이어하기 ─────────────────────────
+describe('닉네임 이어하기 (저장 정보를 잃고 같은 닉네임으로 돌아온 경우)', () => {
+  test('접속 중인 사람의 닉네임은 거절, 끊긴 사람의 닉네임이면 같은 사람으로 이어진다', () => {
+    const { g, ids } = lobbyWith(NAMES);
+    assert.equal(g.try({ type: 'join', name: '민수', token: tok(50) }).error.code, 'NAME_TAKEN');
+    g.do({ type: 'setConnected', playerId: ids[0], connected: false });
+    const r = g.do({ type: 'join', name: ' 민수 ', token: tok(50) });
+    assert.equal(r.playerId, ids[0], '새 사람이 아니라 같은 사람');
+    assert.equal(r.reclaimed, true);
+    assert.equal(g.state.players.length, 4, '인원이 늘지 않는다');
+    assert.equal(g.state.players[0].connected, true);
+  });
+
+  test('이어받은 뒤에는 예전 토큰이 무효, 새 토큰으로만 복귀 가능', () => {
+    const { g, ids } = lobbyWith(NAMES);
+    g.do({ type: 'setConnected', playerId: ids[1], connected: false });
+    g.do({ type: 'join', name: '지은', token: tok(51) });
+    assert.equal(g.try({ type: 'resume', token: tok(2) }).error.code, 'BAD_TOKEN', '옛 토큰은 쓸 수 없음');
+    assert.equal(g.do({ type: 'resume', token: tok(51) }).playerId, ids[1]);
+    assert.equal(playerIdByToken(g.state, tok(2)), null);
+  });
+
+  test('이어받으면 쓰던 답과 투표가 그대로 남는다', () => {
+    const { g, ids } = lobbyWith(NAMES, { seed: 5 });
+    g.host({ type: 'start' });
+    g.do({ type: 'submitAnswers', playerId: ids[2], answers: { app: '넷플릭스' } });
+    g.do({ type: 'setConnected', playerId: ids[2], connected: false });
+    g.do({ type: 'join', name: '하늘', token: tok(52) });
+    const v = viewFor(g.state, { playerId: ids[2] });
+    assert.deepEqual(v.writing.myAnswers, { app: '넷플릭스' });
+    assert.equal(v.writing.submitted, true);
+  });
+
+  test('방이 가득 차도 이어받기는 가능, final 이후에는 불가', () => {
+    const g = new Game();
+    for (let i = 1; i <= LIMITS.MAX_PLAYERS; i++) g.join(`사람${i}`, i);
+    g.do({ type: 'setConnected', playerId: 'p5', connected: false });
+    assert.equal(g.do({ type: 'join', name: '사람5', token: tok(99) }).reclaimed, true);
+    assert.equal(g.try({ type: 'join', name: '새사람', token: tok(98) }).error.code, 'ROOM_FULL');
+    g.do({ type: 'setConnected', playerId: 'p6', connected: false });
+    g.host({ type: 'endGame' });
+    assert.equal(g.try({ type: 'join', name: '사람6', token: tok(97) }).error.code, 'GAME_OVER');
+  });
+
+  test('이어받기는 익명성에 영향을 주지 않는다 (화면 데이터에 토큰·작성자 없음)', () => {
+    const { g, ids } = lobbyWith(NAMES, { seed: 3 });
+    g.host({ type: 'start' });
+    writeAll(g, ids);
+    g.do({ type: 'setConnected', playerId: ids[0], connected: false });
+    g.do({ type: 'join', name: '민수', token: tok(60) });
+    const json = JSON.stringify(viewFor(g.state, { playerId: ids[0] }));
+    assert.doesNotMatch(json, /author|token/i);
+    assert.ok(!json.includes(tok(60)));
   });
 });

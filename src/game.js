@@ -46,7 +46,7 @@ export const ERRORS = Object.freeze({
   ROOM_FULL: `방이 가득 찼어요. (최대 ${LIMITS.MAX_PLAYERS}명)`,
   NAME_EMPTY: '닉네임을 입력해 주세요.',
   NAME_TOO_LONG: `닉네임은 ${LIMITS.NAME_MAX}자까지 쓸 수 있어요.`,
-  NAME_TAKEN: '이미 같은 닉네임이 있어요. 다른 닉네임을 써 주세요.',
+  NAME_TAKEN: '같은 닉네임으로 참가 중인 사람이 있어요. 본인이라면 잠시 뒤 다시 시도하거나, 다른 닉네임을 써 주세요.',
   BAD_TOKEN: '참가 정보가 만료되었어요. 닉네임을 다시 입력해 주세요.',
   GAME_OVER: '이미 끝난 게임이에요.',
   NOT_PLAYER: '먼저 방에 입장해 주세요.',
@@ -209,10 +209,19 @@ const HANDLERS = {
     if (!name) return fail('NAME_EMPTY');
     if (charLength(name) > LIMITS.NAME_MAX) return fail('NAME_TOO_LONG');
     if (typeof a.token !== 'string' || a.token.length < 16) return fail('BAD_ACTION');
-    if (s.players.length >= LIMITS.MAX_PLAYERS) return fail('ROOM_FULL');
-    const key = nameKey(name);
-    if (s.players.some((p) => nameKey(p.name) === key)) return fail('NAME_TAKEN');
     if (s.players.some((p) => p.token === a.token)) return fail('BAD_ACTION');
+    const key = nameKey(name);
+    const same = s.players.find((p) => nameKey(p.name) === key);
+    if (same) {
+      // 지금 접속 중인 사람의 닉네임이면 거절.
+      // 연결이 끊긴 사람의 닉네임이면 "그 사람이 저장 정보를 잃고 다시 온 것"으로 보고 자리를 이어 준다.
+      // (카톡 인앱 브라우저 등에서 토큰이 사라져도 같은 닉네임으로 복귀할 수 있게)
+      if (same.connected) return fail('NAME_TAKEN');
+      same.token = a.token; // 이전 토큰은 이 순간부터 쓸 수 없다
+      same.connected = true;
+      return { result: { playerId: same.id, reclaimed: true } };
+    }
+    if (s.players.length >= LIMITS.MAX_PLAYERS) return fail('ROOM_FULL');
     s.seq += 1;
     const id = `p${s.seq}`;
     s.players.push({ id, name, token: a.token, connected: true, joinedAt: now });
@@ -288,8 +297,10 @@ const HANDLERS = {
     if (round.authorId === p.id) return fail('OWN_ANSWER');
     if (a.targetId === p.id || !s.answerers.includes(a.targetId)) return fail('BAD_TARGET');
     round.votes[p.id] = a.targetId; // 바꾸면 덮어씀
-    // 작성자를 뺀 모든 참가자가 투표하면 바로 공개
-    // (접속 여부를 조건에 넣지 않는다: 넣으면 마감 시점으로 작성자를 추측할 수 있음)
+    // 작성자를 뺀 모든 참가자가 투표하면 바로 공개.
+    // 접속이 끊긴 사람을 기다리지 않게 하면 편하지만, 그러면 "기다리는 사람 수"가 작성자에 따라 달라져
+    // 투표 수와 접속 표시만으로 "작성자가 끊긴 사람 중에 있다"를 추리할 수 있게 된다.
+    // 익명성이 우선이라 접속 여부는 조건에 넣지 않는다. 막히면 진행자가 "바로 공개"를 누른다.
     const voters = s.players.filter((x) => x.id !== round.authorId);
     if (voters.every((x) => round.votes[x.id] !== undefined)) endGuessing(s);
   },
@@ -407,7 +418,7 @@ function toFinal(s, now) {
   s.expireAt = now + TTL.FINAL_MS;
 }
 
-// ───────────────────────── 점수·재미 상 ─────────────────────────
+// ───────────────────────── 점수·어워드 ─────────────────────────
 
 /** 공개된 라운드만으로 점수 계산 */
 export function computeStats(state) {
@@ -434,7 +445,7 @@ export function computeStats(state) {
   return per;
 }
 
-/** 재미 상 목록. 순위표 대신 "상" 위주로 보여 준다. */
+/** 어워드 목록. 순위표 대신 "수상" 위주로 보여 준다. */
 export function computeAwards(state) {
   const stats = computeStats(state);
   const nameOf = (id) => findPlayer(state, id)?.name ?? state.rounds.find((r) => r.authorId === id)?.authorName ?? '?';
@@ -453,6 +464,7 @@ export function computeAwards(state) {
       key: 'detective',
       emoji: '🕵️',
       title: '최고 탐정',
+      en: 'BEST DETECTIVE',
       names: detectives.map(nameOf),
       desc: `${stats[detectives[0]].correct}번이나 정확히 맞혔어요!`,
     });
@@ -466,6 +478,7 @@ export function computeAwards(state) {
       key: 'mystery',
       emoji: '🎭',
       title: '가장 수수께끼 같은 사람',
+      en: 'MOST MYSTERIOUS',
       names: mystery.map(nameOf),
       desc: '아무도 예상 못 했어요. 알면 알수록 새로운 사람!',
     });
@@ -473,6 +486,7 @@ export function computeAwards(state) {
       key: 'obvious',
       emoji: '🔍',
       title: '가장 쉽게 들킨 사람',
+      en: 'OPEN BOOK',
       names: obvious.map(nameOf),
       desc: '모두가 한눈에 알아봤어요. 그만큼 잘 알려진 사람!',
     });
@@ -483,7 +497,8 @@ export function computeAwards(state) {
     awards.push({
       key: 'suspect',
       emoji: '🙋',
-      title: '다들 너인 줄 알았어 상',
+      title: '다들 너인 줄 알았어',
+      en: 'THE USUAL SUSPECT',
       names: suspects.map(nameOf),
       desc: '내 답이 아닌데도 가장 많이 지목받았어요.',
     });

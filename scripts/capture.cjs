@@ -26,10 +26,10 @@ const ANSWERS = {
   const phones = [];
   for (let i = 0; i < 4; i++) phones.push(await (await mk({ width: 390, height: 780 }, 2)).newPage());
 
-  const shot = async (page, name) => {
+  const shot = async (page, name, extra = 0) => {
     await page.evaluate(() => document.fonts.ready);
     await page.evaluate(() => window.scrollTo(0, 0));
-    await sleep(350); // 애니메이션 끝나길 잠깐 기다림
+    await sleep(350 + extra); // 애니메이션 끝나길 잠깐 기다림
     await page.screenshot({ path: path.join(OUT, `${name}.png`) });
     console.log('  saved', name);
   };
@@ -57,6 +57,15 @@ const ANSWERS = {
   await host.getByText('입장한 사람 4명').waitFor();
   await shot(host, '03-host-lobby');
   await shot(phones[0], '04-play-lobby');
+
+  // 큰 화면 없이 진행자가 폰 하나로 진행하는 경우의 화면
+  const hpCtx = await mk({ width: 390, height: 780 }, 2);
+  const hp = await hpCtx.newPage();
+  await hp.goto(`${BASE}/host.html`);
+  await hp.getByRole('button', { name: '방 만들기' }).click();
+  await hp.locator('.code').waitFor();
+  await shot(hp, '17-host-phone-lobby');
+  await hpCtx.close();
 
   // 3) 시작 → 답 쓰기
   await host.getByRole('button', { name: '시작하기' }).click();
@@ -114,10 +123,10 @@ const ANSWERS = {
   }
 
   // 5) 결과
-  await host.getByText('오늘의 재미 상').waitFor();
-  await shot(host, '15-host-final');
-  await phones[0].getByText('오늘의 재미 상').waitFor();
-  await shot(phones[0], '16-play-final');
+  await host.getByText('오늘의 어워드').waitFor();
+  await shot(host, '15-host-final', 6000);
+  await phones[0].getByText('오늘의 어워드').waitFor();
+  await shot(phones[0], '16-play-final', 6000);
 
   await browser.close();
   console.log('완료');

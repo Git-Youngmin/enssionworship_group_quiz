@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="누구일까? 아이콘">
+  <rect width="512" height="512" rx="112" fill="#E8833A"/>
+  <circle cx="226" cy="222" r="120" fill="#FFF7E6" stroke="#5B3A1E" stroke-width="30"/>
+  <line x1="316" y1="312" x2="414" y2="410" stroke="#5B3A1E" stroke-width="52" stroke-linecap="round"/>
+  <path d="M186 192q0-44 42-44t42 40q0 26-30 40q-14 8-14 28" fill="none" stroke="#5B3A1E" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="226" cy="290" r="15" fill="#5B3A1E"/>
+</svg>

@@ -214,9 +214,26 @@ export function tallyView(round) {
 
 export function awardsView(final) {
   if (!final.awards.length) return h('div', { class: 'card center' }, '오늘은 모두가 수수께끼였어요! 🎉');
-  return final.awards.map((a) =>
-    h('div', { class: 'card award' }, h('div', { class: 'emo' }, a.emoji), h('div', null, h('div', { class: 'ttl' }, a.title), h('div', { class: 'who' }, a.names.join(', ')), h('div', { class: 'muted' }, a.desc))),
+  return final.awards.map((a, i) =>
+    h('div', { class: 'card award', style: `--i:${i}` },
+      h('div', { class: 'emo' }, a.emoji),
+      h('div', { class: 'body' },
+        h('div', { class: 'en' }, a.en ?? ''),
+        h('div', { class: 'ttl' }, a.title),
+        h('div', { class: 'who' }, a.names.join(' · ')),
+        h('div', { class: 'muted' }, a.desc))),
   );
+}
+
+/** 시상식 제목 + 꽃가루 (움직임 줄이기 설정이면 CSS 에서 자동으로 멈춤) */
+export function finaleTitle() {
+  const bits = ['🎉', '✨', '🎊', '⭐'];
+  const confetti = h('div', { class: 'confetti', 'aria-hidden': 'true' },
+    Array.from({ length: 18 }, (_, i) => h('span', { style: `left:${(i * 37) % 100}%;animation-delay:${(i % 6) * 0.35}s;animation-duration:${3.2 + (i % 5) * 0.5}s` }, bits[i % bits.length])));
+  return h('div', { class: 'center finale-title' }, confetti,
+    h('div', { class: 'trophy' }, '🏆'),
+    h('h1', { class: 'awards-h' }, 'AWARDS'),
+    h('p', { class: 'muted' }, '오늘의 어워드'));
 }
 
 export function recapView(final) {
@@ -259,4 +276,41 @@ export function controlsBar(view, send, { onCloseRoom } = {}) {
     btns.push(b('게임 끝내기', () => confirm('지금 게임을 끝내고 결과를 볼까요?') && send({ t: 'endGame' }), 'ghost'));
   }
   return h('div', { class: 'controls' }, btns, hint && h('div', { class: 'tag' }, hint));
+}
+
+// ───────────── 초대 링크 ─────────────
+export const joinUrl = (code) => `${location.origin}/play.html?code=${code}`;
+
+/** 클립보드 복사. 막힌 환경(일부 인앱 브라우저)에서는 구형 방식으로 한 번 더 시도한다 */
+export async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {}
+  try {
+    const ta = h('textarea', { style: 'position:fixed;opacity:0;top:0' });
+    ta.value = text;
+    document.body.append(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+/** 초대 버튼들: 링크 복사(카톡 단톡방에 붙여 넣기) + 공유하기(지원하는 폰에서만) */
+export function inviteButtons(code) {
+  const url = joinUrl(code);
+  const text = `누구일까? 퀴즈쇼에 들어오세요! 방 코드 ${code}`;
+  const copy = h('button', { class: 'btn ghost', style: 'flex:1 1 150px', onclick: async () => {
+    const ok = await copyText(`${text}\n${url}`);
+    if (ok) toast('초대 링크를 복사했어요. 단톡방에 붙여 넣어 주세요!');
+    else toast(`복사가 안 돼요. 아래 링크를 길게 눌러 복사해 주세요.\n${url}`, 8000);
+  } }, '📋 초대 링크 복사');
+  const share = typeof navigator.share === 'function'
+    ? h('button', { class: 'btn ghost', style: 'flex:1 1 150px', onclick: () => navigator.share({ title: '누구일까? 퀴즈쇼', text, url }).catch(() => {}) }, '📤 공유하기')
+    : null;
+  return [copy, share];
 }

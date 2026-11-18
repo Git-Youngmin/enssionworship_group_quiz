@@ -98,11 +98,20 @@ textarea.field { min-height: 76px; resize: none; }
 @keyframes grow { from { width: 0 !important; } }
 .say { text-align: center; font-size: 1.25em; padding: 14px; border-radius: 16px; background: #fff0dc; }
 
-/* 재미 상 */
-.award { display: flex; gap: 14px; align-items: center; }
-.award .emo { font-size: 2.4em; }
-.award .ttl { font-size: 0.85em; color: var(--ink-soft); }
-.award .who { font-size: 1.35em; font-weight: 700; }
+/* 어워드(시상식) */
+.finale-title { position: relative; margin-top: 2vh; }
+.trophy { font-size: 3.4em; animation: pop 0.7s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
+.awards-h { font-size: 2.2em; letter-spacing: 0.22em; text-indent: 0.22em; margin: 0; color: #b9801f; }
+.award { display: flex; gap: 16px; align-items: center; background: linear-gradient(135deg, #fffaf0, #fff0c9); border-color: #e6b84f; box-shadow: 0 4px 0 rgba(185, 128, 31, 0.25);
+  animation: award-in 0.8s cubic-bezier(0.2, 1.3, 0.4, 1) both; animation-delay: calc(0.9s + var(--i) * 1.1s); }
+.award .emo { font-size: 2.6em; flex: none; }
+.award .en { font-size: 0.72em; letter-spacing: 0.18em; color: #b9801f; font-weight: 700; }
+.award .ttl { font-size: 0.9em; color: var(--ink-soft); }
+.award .who { font-size: 1.45em; font-weight: 700; line-height: 1.3; }
+@keyframes award-in { from { transform: translateY(26px) scale(0.92); opacity: 0; } to { transform: none; opacity: 1; } }
+.confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 5; }
+.confetti span { position: absolute; top: -8vh; font-size: 1.6em; opacity: 0; animation: fall linear 1 both; }
+@keyframes fall { 0% { transform: translateY(0) rotate(0); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateY(110vh) rotate(360deg); opacity: 0; } }
 .recap { display: flex; flex-direction: column; gap: 8px; font-size: 0.95em; }
 .recap > div { padding: 10px 12px; border-radius: 12px; background: #fff; border: 1px solid var(--line); }
 
