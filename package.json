@@ -5,9 +5,15 @@
   "type": "module",
   "description": "진모임 \"누구일까?\" 퀴즈쇼",
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "e2e": "node test/e2e.mjs"
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "wrangler": "^4.164.0"
   }
 }
