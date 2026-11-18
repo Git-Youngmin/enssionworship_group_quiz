@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>누구일까? 퀴즈쇼</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/common.css">
+</head>
+<body>
+  <main class="page" style="justify-content:center">
+    <div class="center">
+      <div style="font-size:3em">🕵️</div>
+      <h1 style="font-size:2em">누구일까?</h1>
+      <p class="muted">서로 알아가는 진모임 퀴즈쇼</p>
+    </div>
+    <form class="card" id="join" style="display:flex;flex-direction:column;gap:12px">
+      <label for="code"><b>참가하기</b> · 방 코드 4자리</label>
+      <input class="field" id="code" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" placeholder="예) 1234" style="text-align:center;font-size:1.6em;letter-spacing:.2em">
+      <button class="btn block" type="submit">입장하기</button>
+    </form>
+    <a class="btn ghost block" href="/host.html" style="display:block;text-align:center;text-decoration:none;line-height:28px">진행자로 방 만들기</a>
+  </main>
+  <script type="module">
+    document.getElementById('join').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const code = document.getElementById('code').value.trim();
+      if (!/^\d{4}$/.test(code)) return alert('방 코드는 숫자 4자리예요.');
+      location.href = `/play.html?code=${code}`;
+    });
+  </script>
+</body>
+</html>
