@@ -28,12 +28,12 @@ const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY } : un
     <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
     <style>
       html,body{margin:0;width:1200px;height:630px;background:#FFF7E6;color:#5B3A1E;font-family:'Gowun Dodum',sans-serif}
-      .wrap{display:flex;align-items:center;gap:52px;height:100%;padding:0 76px;box-sizing:border-box;border:14px solid #EAD7B5}
-      .ico svg{width:250px;height:250px;display:block;filter:drop-shadow(0 10px 0 rgba(91,58,30,.18))}
+      .wrap{display:flex;align-items:center;gap:52px;height:100%;padding:0 76px;box-sizing:border-box;border:14px solid #5B3A1E}
+      .ico svg{width:250px;height:250px;display:block;filter:drop-shadow(0 10px 0 rgba(91,58,30,.22))}
       h1{margin:0;font-size:132px;line-height:1.05;font-weight:400;white-space:nowrap}
       .sub{font-size:46px;margin-top:16px;white-space:nowrap}
       .tags{display:flex;gap:12px;margin-top:34px}
-      .tags span{font-size:28px;padding:8px 22px;border-radius:999px;background:#F6E7C8;white-space:nowrap}
+      .tags span{font-size:28px;padding:8px 22px;border-radius:999px;background:#FFD84D;white-space:nowrap}
     </style></head><body><div class="wrap">
       <div class="ico">${svg}</div>
       <div><h1>누구일까?</h1><div class="sub">서로 알아가는 진모임 퀴즈쇼</div>

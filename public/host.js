@@ -1,5 +1,5 @@
 // 진행자 화면: 방 만들기 → 큰 화면(QR·질문·익명 답·정답 공개) + 하단 조작 패널
-import { h, mount, toast, store, qrSvg, inviteButtons, joinUrl, connectRoom, statusBanner, syncClock, timerEl, playerChips, tallyView, awardsView, finaleTitle, recapView, controlsBar, FATAL_TEXT } from './common.js';
+import { h, mount, toast, store, qrSvg, inviteButtons, joinUrl, connectRoom, statusBanner, syncClock, timerEl, nameTags, tallyView, awardsView, finaleTitle, recapView, controlsBar, clearBar, slip, stamp, voteDots, logo, icon, FATAL_TEXT } from './common.js';
 
 const app = document.getElementById('app');
 const HOST_KEY = 'jinquiz.host';
@@ -16,7 +16,7 @@ const HOST_KEY = 'jinquiz.host';
 let conn = null;
 let view = null;
 let renderKey = '';
-let drumUntil = 0; // 정답 공개 전 "두구두구" 연출 종료 시각
+let suspenseUntil = 0; // 정답 공개 전 뜸 들이는 시간의 끝
 let notice = '';
 
 const saved = store.get(HOST_KEY);
@@ -24,7 +24,7 @@ saved ? enterRoom(saved) : setupScreen();
 
 // ───────────── 방 만들기 ─────────────
 async function setupScreen() {
-  document.querySelector('.controls')?.remove();
+  clearBar();
   mount(app, h('p', { class: 'center muted', style: 'margin-top:20vh' }, '질문 목록을 불러오는 중…'));
   let presets;
   try {
@@ -84,8 +84,8 @@ async function setupScreen() {
   } }, '방 만들기');
 
   mount(app,
-    h('div', { class: 'center' }, h('div', { style: 'font-size:2.6em' }, '🎙️'), h('h1', null, '진행자: 방 만들기'), notice && h('p', { class: 'muted' }, notice)),
-    h('div', { class: 'card', style: 'display:flex;flex-direction:column;gap:10px' }, h('b', null, '오늘의 질문'), count, list,
+    h('div', { class: 'center' }, logo(), h('h1', { style: 'margin-top:12px' }, '진행자: 방 만들기'), notice && h('p', { class: 'muted', style: 'margin-top:6px' }, notice)),
+    h('div', { class: 'card', style: 'display:flex;flex-direction:column;gap:10px' }, h('h2', null, '오늘의 질문'), count, list,
       h('div', { class: 'row' }, customInput, h('button', { class: 'btn ghost', onclick: addCustom, style: 'flex:none' }, '추가'))),
     h('div', { class: 'card', style: 'display:grid;grid-template-columns:1fr 1fr;gap:10px' },
       h('label', null, h('div', { class: 'muted' }, '답 쓰기 (문항당)'), sel([40, 60, 90, 120], 60, (v) => (write = v))),
@@ -110,11 +110,11 @@ function enterRoom({ code, hostToken }) {
       setupScreen();
     },
     onView: (v) => {
-      if (view && v.phase === 'reveal' && view.phase !== 'reveal') drumUntil = Date.now() + 1400; // 공개 연출
+      if (view && v.phase === 'reveal' && view.phase !== 'reveal') suspenseUntil = Date.now() + 1300; // 도장 찍기 전 잠깐 뜸 들이기
       view = v;
       syncClock(v);
       render();
-      if (v.phase === 'reveal' && drumUntil > Date.now()) setTimeout(render, drumUntil - Date.now() + 20);
+      if (v.phase === 'reveal' && suspenseUntil > Date.now()) setTimeout(render, suspenseUntil - Date.now() + 20);
     },
   });
 }
@@ -123,7 +123,7 @@ const send = (o) => conn?.send(o);
 
 function render() {
   const v = view;
-  const key = `${v.phase}|${v.round?.index ?? ''}|${drumUntil > Date.now()}`;
+  const key = `${v.phase}|${v.round?.index ?? ''}|${suspenseUntil > Date.now()}`;
   // 같은 단계 안의 갱신은 화면 전체를 다시 그리되, 조작 막대는 단계가 바뀔 때만 새로 만든다
   const bar = document.querySelector('.controls');
   if (!bar || key !== renderKey || v.phase === 'lobby') {
@@ -139,63 +139,70 @@ function phoneControlLink() {
   const info = store.get(HOST_KEY);
   const url = `${location.origin}/host.html#c=${info.code}&k=${info.hostToken}`;
   return h('details', { class: 'card' },
-    h('summary', { style: 'cursor:pointer;min-height:44px;display:flex;align-items:center' }, '📱 다른 기기(폰)에서 조작하기'),
-    h('p', { class: 'muted', style: 'margin:8px 0' }, '⚠️ 이 QR로 들어가면 진행자 권한을 가져요. 참가자에게 보여 주지 마세요.'),
+    h('summary', { style: 'cursor:pointer;min-height:44px;display:flex;align-items:center;gap:8px' }, icon('phone', { size: 20 }), '다른 기기(폰)에서 조작하기'),
+    h('p', { class: 'muted', style: 'margin:8px 0' }, '이 QR로 들어가면 진행자 권한을 가져요. 참가자에게는 보여 주지 마세요.'),
     h('div', { class: 'center' }, qrSvg(url)));
 }
 
 // ───────────── 화면들 ─────────────
 function lobbyScreen(v) {
   return [
-    h('div', { class: 'row', style: 'flex-wrap:wrap' },
+    h('div', { class: 'row wrap' },
       inviteButtons(v.code),
-      h('a', { class: 'btn', href: `/play.html?code=${v.code}`, style: 'flex:1 1 150px;text-align:center;text-decoration:none;line-height:28px' }, '🙋 나도 참가하기')),
+      h('a', { class: 'btn', href: `/play.html?code=${v.code}` }, icon('join', { size: 20 }), '나도 참가하기')),
     h('div', { class: 'lobby-grid' },
       h('div', { class: 'center' }, qrSvg(joinUrl(v.code)), h('p', { class: 'muted', style: 'margin-top:8px' }, 'QR을 찍거나 아래 코드를 입력하세요')),
-      h('div', { style: 'display:flex;flex-direction:column;gap:12px' },
+      h('div', { style: 'display:flex;flex-direction:column;gap:14px' },
         h('p', { class: 'center muted' }, `${location.host} 에서 방 코드 입력`),
         h('div', { class: 'code' }, v.code),
-        h('div', { class: 'card' }, h('p', { class: 'center muted', style: 'margin-bottom:10px' }, v.players.length ? `입장한 사람 ${v.players.length}명` : '아직 아무도 없어요. 기다리는 중…'), playerChips(v)))),
-    h('div', { class: 'card soft' }, h('b', null, '오늘의 질문 '), v.questions.map((q, i) => h('div', null, `${i + 1}. ${q.text}`))),
+        h('div', null, h('p', { class: 'center muted', style: 'margin-bottom:14px' }, v.players.length ? `입장한 사람 ${v.players.length}명` : '아직 아무도 없어요. 기다리는 중…'), nameTags(v)))),
+    h('div', { class: 'sheet' }, h('h2', { style: 'margin-bottom:6px' }, '오늘의 질문'), v.questions.map((q, i) => h('div', null, `${i + 1}. ${q.text}`))),
     phoneControlLink(),
   ];
 }
 
 function writingScreen(v) {
   return [
-    h('div', { class: 'center' }, h('span', { class: 'step' }, '답 쓰기'), h('h1', { style: 'margin-top:8px' }, '폰으로 답을 써 주세요'), h('p', { class: 'muted' }, '🤫 다른 사람 답은 보이지 않아요')),
+    h('div', { class: 'center' }, h('span', { class: 'step' }, '답 쓰기'), h('h1', { style: 'margin-top:10px' }, '폰으로 답을 써 주세요'), h('p', { class: 'muted' }, '다른 사람 답은 보이지 않아요')),
     timerEl(),
-    h('div', { class: 'card soft' }, v.questions.map((q, i) => h('div', { class: 'big-q' }, `${i + 1}. ${q.text}`))),
-    h('div', { class: 'card' }, h('p', { class: 'center muted', style: 'margin-bottom:10px' }, `${v.writing.doneCount}/${v.writing.total}명 제출`), playerChips(v, { showDone: true })),
+    h('div', { class: 'sheet' }, v.questions.map((q, i) => h('div', { style: 'font-size:1.2em' }, `${i + 1}. ${q.text}`))),
+    h('div', null, h('p', { class: 'center muted', style: 'margin-bottom:14px' }, `${v.writing.doneCount}/${v.writing.total}명 제출`), nameTags(v, { showDone: true })),
   ];
 }
 
 function guessingScreen(v) {
   const r = v.round;
   return [
-    h('div', { style: 'display:flex;justify-content:space-between;align-items:center' }, h('span', { class: 'step' }, `${r.index + 1} / ${r.total}번째`), h('span', { class: 'muted' }, `${r.votedCount}/${r.voterTotal}명 투표 완료`)),
+    h('div', { style: 'display:flex;justify-content:space-between;align-items:center' }, h('span', { class: 'step' }, `${r.index + 1} / ${r.total}번째`), h('span', { class: 'muted' }, '폰에서 투표해 주세요')),
     timerEl(),
-    h('div', { class: 'q center big-q' }, r.questionText),
-    h('div', { class: 'answer' }, `“${r.answerText}”`),
-    h('h2', { class: 'center' }, '이 답은 누가 썼을까요? 🕵️'),
-    h('p', { class: 'muted center' }, '폰에서 투표해 주세요 (내 답에는 투표할 수 없어요)'),
+    h('div', { class: 'stage' },
+      h('div', { class: 'q' }, r.questionText),
+      slip(r.answerText),
+      h('h2', { class: 'center' }, '이 답은 누가 썼을까요?'),
+      voteDots(r.votedCount, r.voterTotal),
+      h('p', { class: 'muted center' }, '내 답에는 투표할 수 없어요')),
   ];
 }
 
 function revealScreen(v) {
   const r = v.round;
   const head = [
-    h('span', { class: 'step', style: 'align-self:flex-start' }, `${r.index + 1} / ${r.total}번째 정답`),
-    h('div', { class: 'q center big-q' }, r.questionText),
-    h('div', { class: 'answer' }, `“${r.answerText}”`),
+    h('span', { class: 'step' }, `${r.index + 1} / ${r.total}번째 정답`),
+    h('div', { class: 'q' }, r.questionText),
+    slip(r.answerText, { compact: true }),
   ];
-  if (drumUntil > Date.now()) return [...head, h('div', { class: 'drum' }, '🥁 두구두구두구…')];
+  if (suspenseUntil > Date.now()) {
+    return [h('div', { class: 'stage' }, ...head, h('div', { class: 'wait' }, '누구의 쪽지일까요', h('i', null, '.'), h('i', null, '.'), h('i', null, '.')))];
+  }
   return [
-    ...head,
-    h('div', { class: 'reveal-name' }, `${r.author.name} 🎉`),
-    h('div', { class: 'card' }, tallyView(r)),
-    r.correctVoters.length > 0 ? h('p', { class: 'center' }, `👏 맞힌 사람: ${r.correctVoters.join(', ')}`) : h('p', { class: 'center' }, '아무도 못 맞혔어요! 😲'),
-    h('div', { class: 'say', style: 'font-size:1.2em' }, `🎤 ${r.author.name}님, 이 답에 대해 한마디 부탁해요!`),
+    h('div', { class: 'stage' },
+      ...head,
+      stamp(r.author.name),
+      h('div', { class: 'card' }, tallyView(r)),
+      r.correctVoters.length > 0
+        ? h('div', { class: 'verdict' }, icon('check', { size: 26 }), `맞힌 사람: ${r.correctVoters.join(', ')}`)
+        : h('div', { class: 'verdict no' }, '아무도 못 맞혔어요!'),
+      h('div', { class: 'say' }, icon('mic', { size: 28 }), `${r.author.name}님, 이 답에 대해 한마디 부탁해요!`)),
   ];
 }
 
@@ -206,6 +213,6 @@ function finalScreen(v) {
     awardsView(f),
     h('h2', { class: 'center', style: 'margin-top:8px' }, '오늘 나온 이야기'),
     recapView(f),
-    h('p', { class: 'muted center' }, '🧹 이 방의 답과 기록은 곧 모두 삭제돼요.'),
+    h('p', { class: 'muted center' }, '이 방의 답과 기록은 곧 모두 삭제돼요.'),
   ];
 }

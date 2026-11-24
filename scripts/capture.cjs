@@ -6,7 +6,8 @@ const path = require('node:path');
 const { chromium } = createRequire(__filename)('playwright');
 
 const BASE = process.env.BASE ?? 'http://localhost:8787';
-const OUT = path.join(__dirname, '..', 'docs', 'screenshots');
+const OUT = process.env.OUT ?? path.join(__dirname, '..', 'docs', 'screenshots');
+const PHONE_W = Number(process.env.PHONE_W ?? 390); // 아주 좁은 폰 점검: PHONE_W=320
 const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } : undefined;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -24,12 +25,18 @@ const ANSWERS = {
   const hostCtx = await mk({ width: 1280, height: 1040 }, 1.25);
   const host = await hostCtx.newPage();
   const phones = [];
-  for (let i = 0; i < 4; i++) phones.push(await (await mk({ width: 390, height: 780 }, 2)).newPage());
+  for (let i = 0; i < 4; i++) phones.push(await (await mk({ width: PHONE_W, height: 780 }, 2)).newPage());
 
+  const problems = [];
+  const watch = (page, label) => page.on('pageerror', (e) => problems.push(`${label}: 화면 오류 ${e.message}`));
+  watch(host, '진행자');
+  phones.forEach((p, i) => watch(p, `폰${i + 1}`));
   const shot = async (page, name, extra = 0) => {
     await page.evaluate(() => document.fonts.ready);
     await page.evaluate(() => window.scrollTo(0, 0));
     await sleep(350 + extra); // 애니메이션 끝나길 잠깐 기다림
+    const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    if (over > 0) problems.push(`${name}: 가로 스크롤 ${over}px`);
     await page.screenshot({ path: path.join(OUT, `${name}.png`) });
     console.log('  saved', name);
   };
@@ -59,7 +66,7 @@ const ANSWERS = {
   await shot(phones[0], '04-play-lobby');
 
   // 큰 화면 없이 진행자가 폰 하나로 진행하는 경우의 화면
-  const hpCtx = await mk({ width: 390, height: 780 }, 2);
+  const hpCtx = await mk({ width: PHONE_W, height: 780 }, 2);
   const hp = await hpCtx.newPage();
   await hp.goto(`${BASE}/host.html`);
   await hp.getByRole('button', { name: '방 만들기' }).click();
@@ -75,7 +82,7 @@ const ANSWERS = {
   await fill(0);
   await shot(phones[0], '05-play-writing');
   await phones[0].getByRole('button', { name: '제출하기' }).click();
-  await phones[0].getByText('제출 완료').waitFor();
+  await phones[0].getByRole('heading', { name: '제출 완료' }).waitFor();
   await fill(1);
   await phones[1].getByRole('button', { name: '제출하기' }).click();
   await host.getByText('2/4명 제출').waitFor();
@@ -108,11 +115,11 @@ const ANSWERS = {
     };
     await pick(voters[0], false);
     await pick(voters[1], round % 2 === 1 ? true : false);
-    if (round === 0) { await host.getByText('2/3명 투표 완료').waitFor(); await shot(host, '10-host-guessing'); }
+    if (round === 0) { await host.locator('[aria-label="2/3명 투표 완료"]').waitFor(); await shot(host, '10-host-guessing'); }
     await pick(voters[2], round === 0 ? true : false);
-    await host.getByText('두구두구').waitFor({ timeout: 4000 }).catch(() => {});
+    await host.getByText('누구의 쪽지일까요').waitFor({ timeout: 4000 }).catch(() => {});
     if (round === 0) await shot(host, '11-host-drumroll');
-    await host.locator('.reveal-name').waitFor();
+    await host.locator('.stamp').waitFor();
     if (round === 0) {
       await shot(host, '12-host-reveal');
       await shot(phones[voters[0]], '13-play-reveal');
@@ -129,5 +136,6 @@ const ANSWERS = {
   await shot(phones[0], '16-play-final', 6000);
 
   await browser.close();
+  console.log(problems.length ? `점검에서 발견된 문제:\n  ${problems.join('\n  ')}` : '점검: 가로 스크롤 없음, 화면 오류 없음');
   console.log('완료');
 })().catch((e) => { console.error(e); process.exit(1); });

@@ -1,5 +1,8 @@
 // 호스트·참가자 화면 공통 도우미 (빌드 도구 없이 ES 모듈로 동작)
 import qrcode from './vendor/qrcode.mjs';
+import { icon } from './icons.js';
+
+export { icon };
 
 // ───────────── DOM 도우미 ─────────────
 // h('div', {class:'card', onclick: fn}, '글자', 자식요소...) — 글자는 항상 textContent 로 넣어 XSS 를 막는다
@@ -185,14 +188,43 @@ function tickTimers() {
 setInterval(tickTimers, 250);
 
 // ───────────── 화면 조각 (호스트·참가자 공용) ─────────────
-export function playerChips(view, { showDone = false } = {}) {
-  return h(
-    'div',
-    { class: 'chips' },
-    view.players.map((p) =>
-      h('span', { class: `chip${showDone && p.done ? ' done' : ''}${p.connected ? '' : ' off'}${view.me?.id === p.id ? ' me' : ''}` }, (showDone && p.done ? '✓ ' : '') + p.name),
-    ),
-  );
+
+/** 앱 아이콘 (이모지 대신 직접 그린 로고) */
+export const logo = (cls = 'logo') => h('img', { class: cls, src: '/favicon.svg', alt: '', width: 76, height: 76 });
+
+/** 익명 답 쪽지. 글자 수에 따라 크기를 줄여 긴 답도 한 화면에 들어오게 한다 */
+export function slip(text, { compact = false } = {}) {
+  const n = [...text].length;
+  const size = n <= 8 ? 'len-s' : n <= 20 ? 'len-m' : n <= 40 ? 'len-l' : 'len-xl';
+  return h('div', { class: `slip ${size}${compact ? ' compact' : ''}` }, `“${text}”`);
+}
+
+/** 정답 공개 도장 */
+export const stamp = (name) => h('div', { class: 'stamp-row' }, h('div', { class: 'stamp' }, name));
+
+/** 투표 현황: 누가 했는지는 숨기고 몇 명 했는지만 점으로 보여 준다 (익명성) */
+export function voteDots(voted, total) {
+  const n = Math.min(total, 40);
+  return h('div', { class: 'dots', role: 'img', 'aria-label': `${voted}/${total}명 투표 완료` },
+    Array.from({ length: n }, (_, i) => h('i', { class: i < voted ? 'on' : '' })));
+}
+
+// 이름표는 새로 들어온 사람만 "톡" 붙는 움직임을 준다 (처음 그릴 때는 모두 가만히)
+const seenTags = new Set();
+let tagsStarted = false;
+const TILT = [-2.2, 1.4, -1, 2, -1.6, 0.8];
+
+/** 입장 현황 이름표. showDone 이면 답 쓰기 제출 현황 */
+export function nameTags(view, { showDone = false } = {}) {
+  const tags = view.players.map((p, i) => {
+    const isNew = tagsStarted && !seenTags.has(p.id);
+    const band = showDone ? (p.done ? '제출 완료' : '작성 중') : '나는';
+    return h('div', { class: `nametag${showDone && !p.done ? ' todo' : ''}${p.connected ? '' : ' off'}${view.me?.id === p.id ? ' me' : ''}${isNew ? ' new' : ''}`, style: `--r:${TILT[i % TILT.length]}deg` },
+      h('div', { class: 'band' }, band), h('div', { class: 'nm' }, p.name));
+  });
+  view.players.forEach((p) => seenTags.add(p.id));
+  tagsStarted = true;
+  return h('div', { class: 'tags' }, tags);
 }
 
 export function tallyView(round) {
@@ -212,32 +244,33 @@ export function tallyView(round) {
   );
 }
 
+const AWARD_ICON = { detective: 'magnifier', mystery: 'mask', obvious: 'book', suspect: 'bubble' };
+
 export function awardsView(final) {
-  if (!final.awards.length) return h('div', { class: 'card center' }, '오늘은 모두가 수수께끼였어요! 🎉');
+  if (!final.awards.length) return h('div', { class: 'card center' }, '오늘은 모두가 수수께끼였어요.');
   return final.awards.map((a, i) =>
-    h('div', { class: 'card award', style: `--i:${i}` },
-      h('div', { class: 'emo' }, a.emoji),
-      h('div', { class: 'body' },
-        h('div', { class: 'en' }, a.en ?? ''),
-        h('div', { class: 'ttl' }, a.title),
-        h('div', { class: 'who' }, a.names.join(' · ')),
+    h('div', { class: 'award', style: `--i:${i}` },
+      h('div', { class: 'ic' }, icon(AWARD_ICON[a.key] ?? 'trophy', { size: 30 })),
+      h('div', null,
+        h('div', { class: 'ttl' }, a.title, a.en && h('small', null, a.en)),
+        h('div', { class: 'who' }, a.names.join(', ')),
         h('div', { class: 'muted' }, a.desc))),
   );
 }
 
 /** 시상식 제목 + 꽃가루 (움직임 줄이기 설정이면 CSS 에서 자동으로 멈춤) */
 export function finaleTitle() {
-  const bits = ['🎉', '✨', '🎊', '⭐'];
+  const colors = ['#c8452b', '#ffd84d', '#d9b98a', '#5b3a1e'];
   const confetti = h('div', { class: 'confetti', 'aria-hidden': 'true' },
-    Array.from({ length: 18 }, (_, i) => h('span', { style: `left:${(i * 37) % 100}%;animation-delay:${(i % 6) * 0.35}s;animation-duration:${3.2 + (i % 5) * 0.5}s` }, bits[i % bits.length])));
-  return h('div', { class: 'center finale-title' }, confetti,
-    h('div', { class: 'trophy' }, '🏆'),
+    Array.from({ length: 28 }, (_, i) => h('span', { style: `left:${(i * 37) % 100}%;--c:${colors[i % 4]};animation-delay:${(i % 7) * 0.3}s;animation-duration:${3 + (i % 5) * 0.5}s` })));
+  return h('div', { class: 'finale-title' }, confetti,
+    h('div', { class: 'trophy' }, icon('trophy', { size: 34 })),
     h('h1', { class: 'awards-h' }, 'ENSSION AWARD'),
     h('p', { class: 'muted' }, '엔션워십 청년부 · 오늘의 어워드'));
 }
 
 export function recapView(final) {
-  return h('div', { class: 'recap' }, final.recap.map((r) => h('div', null, h('div', { class: 'muted' }, r.questionText), h('div', null, `“${r.answerText}” — `, h('b', null, r.authorName)))));
+  return h('div', { class: 'recap' }, final.recap.map((r) => h('div', null, h('div', { class: 'muted' }, r.questionText), h('div', null, `“${r.answerText}” — ${r.authorName}`))));
 }
 
 /** 진행자 조작 막대. view.phase 에 따라 지금 필요한 버튼만 보여 준다. */
@@ -249,18 +282,18 @@ export function controlsBar(view, send, { onCloseRoom } = {}) {
   switch (view.phase) {
     case 'lobby': {
       const enough = view.players.length >= 2;
-      btns.push(b('시작하기 ▶', () => send({ t: 'start' }), '', !enough));
+      btns.push(b('시작하기', () => send({ t: 'start' }), '', !enough));
       if (!enough) hint = '2명 이상 들어오면 시작할 수 있어요';
       break;
     }
     case 'writing':
-      btns.push(b('+30초', () => send({ t: 'addTime', seconds: 30 }), 'ghost'), b('지금 마감 ⏭', () => send({ t: 'skip' })));
+      btns.push(b('+30초', () => send({ t: 'addTime', seconds: 30 }), 'ghost'), b('지금 마감', () => send({ t: 'skip' })));
       break;
     case 'guessing':
-      btns.push(b('+10초', () => send({ t: 'addTime', seconds: 10 }), 'ghost'), b('바로 공개 ⏭', () => send({ t: 'skip' })));
+      btns.push(b('+10초', () => send({ t: 'addTime', seconds: 10 }), 'ghost'), b('바로 공개', () => send({ t: 'skip' })));
       break;
     case 'reveal':
-      btns.push(b(r.index + 1 >= r.total ? '결과 보기 🏆' : '다음 문제 ▶', () => send({ t: 'next' })));
+      btns.push(b(r.index + 1 >= r.total ? '결과 보기' : '다음 문제', () => send({ t: 'next' })));
       break;
     case 'final':
       btns.push(
@@ -275,7 +308,14 @@ export function controlsBar(view, send, { onCloseRoom } = {}) {
   if (view.phase !== 'final' && view.phase !== 'lobby') {
     btns.push(b('게임 끝내기', () => confirm('지금 게임을 끝내고 결과를 볼까요?') && send({ t: 'endGame' }), 'ghost'));
   }
+  document.body.style.setProperty('--bar', hint ? '112px' : '92px'); // 하단 막대에 가려지지 않게 화면 아래 여백을 맞춘다
   return h('div', { class: 'controls' }, btns, hint && h('div', { class: 'tag' }, hint));
+}
+
+/** 하단 조작 막대를 없앨 때 여백도 되돌린다 */
+export function clearBar() {
+  document.querySelector('.controls')?.remove();
+  document.body.style.setProperty('--bar', '0px');
 }
 
 // ───────────── 초대 링크 ─────────────
@@ -304,13 +344,13 @@ export async function copyText(text) {
 export function inviteButtons(code) {
   const url = joinUrl(code);
   const text = `누구일까? 퀴즈쇼에 들어오세요! 방 코드 ${code}`;
-  const copy = h('button', { class: 'btn ghost', style: 'flex:1 1 150px', onclick: async () => {
+  const copy = h('button', { class: 'btn ghost', onclick: async () => {
     const ok = await copyText(`${text}\n${url}`);
-    if (ok) toast('초대 링크를 복사했어요. 단톡방에 붙여 넣어 주세요!');
+    if (ok) toast('초대 링크를 복사했어요. 단톡방에 붙여 넣어 주세요.');
     else toast(`복사가 안 돼요. 아래 링크를 길게 눌러 복사해 주세요.\n${url}`, 8000);
-  } }, '📋 초대 링크 복사');
+  } }, icon('clipboard', { size: 20 }), '초대 링크 복사');
   const share = typeof navigator.share === 'function'
-    ? h('button', { class: 'btn ghost', style: 'flex:1 1 150px', onclick: () => navigator.share({ title: '누구일까? 퀴즈쇼', text, url }).catch(() => {}) }, '📤 공유하기')
+    ? h('button', { class: 'btn ghost', onclick: () => navigator.share({ title: '누구일까? 퀴즈쇼', text, url }).catch(() => {}) }, icon('share', { size: 20 }), '공유하기')
     : null;
   return [copy, share];
 }

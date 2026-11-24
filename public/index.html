@@ -27,16 +27,16 @@
 <body>
   <main class="page" style="justify-content:center">
     <div class="center">
-      <div style="font-size:3em">🕵️</div>
-      <h1 style="font-size:2em">누구일까?</h1>
+      <img src="/favicon.svg" alt="" width="76" height="76" style="border-radius:18px">
+      <h1 style="font-size:2.2em;margin-top:10px">누구일까?</h1>
       <p class="muted">서로 알아가는 진모임 퀴즈쇼</p>
     </div>
     <form class="card" id="join" style="display:flex;flex-direction:column;gap:12px">
-      <label for="code"><b>참가하기</b> · 방 코드 4자리</label>
+      <label for="code">참가하기 · 방 코드 4자리</label>
       <input class="field" id="code" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" placeholder="예) 1234" style="text-align:center;font-size:1.6em;letter-spacing:.2em">
       <button class="btn block" type="submit">입장하기</button>
     </form>
-    <a class="btn ghost block" href="/host.html" style="display:block;text-align:center;text-decoration:none;line-height:28px">진행자로 방 만들기</a>
+    <a class="btn ghost block" href="/host.html">진행자로 방 만들기</a>
   </main>
   <script type="module">
     document.getElementById('join').addEventListener('submit', (e) => {

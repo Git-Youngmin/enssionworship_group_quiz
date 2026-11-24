@@ -462,9 +462,8 @@ export function computeAwards(state) {
   if (detectives.length)
     awards.push({
       key: 'detective',
-      emoji: '🕵️',
       title: '최고 탐정',
-      en: 'BEST DETECTIVE',
+      en: 'Best Detective',
       names: detectives.map(nameOf),
       desc: `${stats[detectives[0]].correct}번이나 정확히 맞혔어요!`,
     });
@@ -476,17 +475,15 @@ export function computeAwards(state) {
   if (authors.length >= 2 && ratio(mystery[0]) < ratio(obvious[0])) {
     awards.push({
       key: 'mystery',
-      emoji: '🎭',
       title: '가장 수수께끼 같은 사람',
-      en: 'MOST MYSTERIOUS',
+      en: 'Most Mysterious',
       names: mystery.map(nameOf),
       desc: '아무도 예상 못 했어요. 알면 알수록 새로운 사람!',
     });
     awards.push({
       key: 'obvious',
-      emoji: '🔍',
       title: '가장 쉽게 들킨 사람',
-      en: 'OPEN BOOK',
+      en: 'Open Book',
       names: obvious.map(nameOf),
       desc: '모두가 한눈에 알아봤어요. 그만큼 잘 알려진 사람!',
     });
@@ -496,9 +493,8 @@ export function computeAwards(state) {
   if (suspects.length)
     awards.push({
       key: 'suspect',
-      emoji: '🙋',
       title: '다들 너인 줄 알았어',
-      en: 'THE USUAL SUSPECT',
+      en: 'The Usual Suspect',
       names: suspects.map(nameOf),
       desc: '내 답이 아닌데도 가장 많이 지목받았어요.',
     });
